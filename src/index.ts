@@ -1,5 +1,4 @@
 import "dotenv/config";
-import cors from "cors";
 import { isValidBearerToken } from "./security.js";
 import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
@@ -13,12 +12,14 @@ for (const key of requiredEnv) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
 }
+if ((process.env.MCP_AUTH_TOKEN ?? "").length < 32) {
+  throw new Error("MCP_AUTH_TOKEN must contain at least 32 characters.");
+}
 
 const github = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "1mb" }));
-app.use(cors({ origin: false, methods: ["GET", "POST", "DELETE"], allowedHeaders: ["content-type", "mcp-session-id", "authorization"] }));
 
 function isAuthorized(req: Request): boolean {
   return isValidBearerToken(req.header("authorization"), process.env.MCP_AUTH_TOKEN ?? "");
@@ -43,11 +44,17 @@ function createMcpServer(): McpServer {
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     async ({ page, per_page, owner }) => {
-      const response = owner
-        ? await github.rest.repos.listForUser({ username: owner, page, per_page, sort: "updated" })
-        : await github.rest.repos.listForAuthenticatedUser({ page, per_page, sort: "updated", affiliation: "owner,collaborator,organization_member" });
+      const response = await github.rest.repos.listForAuthenticatedUser({
+        page,
+        per_page,
+        sort: "updated",
+        affiliation: "owner,collaborator,organization_member"
+      });
+      const visibleRepositories = owner
+        ? response.data.filter((repo) => repo.owner.login.toLowerCase() === owner.toLowerCase())
+        : response.data;
 
-      const repositories = response.data.map((repo) => ({
+      const repositories = visibleRepositories.map((repo) => ({
         full_name: repo.full_name,
         description: repo.description,
         private: repo.private,
