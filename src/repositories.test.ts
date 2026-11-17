@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { listRepositories } from "./repositories.js";
 
 interface TestRepository {
@@ -10,16 +11,27 @@ function repository(owner: string, name: string): TestRepository {
   return { owner: { login: owner }, name };
 }
 
+function createFetcher(
+  handler: (page: number, perPage: number) => Promise<TestRepository[]>
+) {
+  const calls: Array<[number, number]> = [];
+  const fetchPage = async (page: number, perPage: number) => {
+    calls.push([page, perPage]);
+    return handler(page, perPage);
+  };
+  return { fetchPage, calls };
+}
+
 describe("listRepositories", () => {
   it("requests the requested page directly when no owner filter is supplied", async () => {
-    const fetchPage = vi.fn(async (page: number, perPage: number) => [
+    const { fetchPage, calls } = createFetcher(async (page, perPage) => [
       repository("alice", `page-${page}-size-${perPage}`)
     ]);
 
     const result = await listRepositories(fetchPage, { page: 3, per_page: 5 });
 
-    expect(result).toEqual([repository("alice", "page-3-size-5")]);
-    expect(fetchPage).toHaveBeenCalledExactlyOnceWith(3, 5);
+    assert.deepEqual(result, [repository("alice", "page-3-size-5")]);
+    assert.deepEqual(calls, [[3, 5]]);
   });
 
   it("finds owner repositories on later GitHub API pages", async () => {
@@ -30,7 +42,9 @@ describe("listRepositories", () => {
       repository("slimGT-ui", "connector"),
       repository("slimGT-ui", "md-files")
     ];
-    const fetchPage = vi.fn(async (page: number) => page === 1 ? firstPage : secondPage);
+    const { fetchPage, calls } = createFetcher(async (page) =>
+      page === 1 ? firstPage : secondPage
+    );
 
     const result = await listRepositories(fetchPage, {
       page: 1,
@@ -38,10 +52,8 @@ describe("listRepositories", () => {
       owner: "slimGT-ui"
     });
 
-    expect(result).toEqual(secondPage);
-    expect(fetchPage).toHaveBeenCalledTimes(2);
-    expect(fetchPage).toHaveBeenNthCalledWith(1, 1, 100);
-    expect(fetchPage).toHaveBeenNthCalledWith(2, 2, 100);
+    assert.deepEqual(result, secondPage);
+    assert.deepEqual(calls, [[1, 100], [2, 100]]);
   });
 
   it("returns the requested result page after filtering across API pages", async () => {
@@ -56,7 +68,9 @@ describe("listRepositories", () => {
       repository("target", "five"),
       ...Array.from({ length: 98 }, (_, index) => repository("other", `more-${index}`))
     ];
-    const fetchPage = vi.fn(async (page: number) => page === 1 ? firstPage : secondPage);
+    const { fetchPage, calls } = createFetcher(async (page) =>
+      page === 1 ? firstPage : secondPage
+    );
 
     const result = await listRepositories(fetchPage, {
       page: 2,
@@ -64,12 +78,12 @@ describe("listRepositories", () => {
       owner: "target"
     });
 
-    expect(result).toEqual([repository("target", "three"), repository("target", "four")]);
-    expect(fetchPage).toHaveBeenCalledTimes(2);
+    assert.deepEqual(result, [repository("target", "three"), repository("target", "four")]);
+    assert.equal(calls.length, 2);
   });
 
   it("matches owner names case-insensitively", async () => {
-    const fetchPage = vi.fn(async () => [
+    const { fetchPage } = createFetcher(async () => [
       repository("SlimGT-UI", "connector"),
       repository("another-user", "repo")
     ]);
@@ -80,11 +94,11 @@ describe("listRepositories", () => {
       owner: "slimgt-ui"
     });
 
-    expect(result).toEqual([repository("SlimGT-UI", "connector")]);
+    assert.deepEqual(result, [repository("SlimGT-UI", "connector")]);
   });
 
   it("stops when GitHub returns the final partial page", async () => {
-    const fetchPage = vi.fn(async () => [
+    const { fetchPage, calls } = createFetcher(async () => [
       repository("other", "one"),
       repository("other", "two")
     ]);
@@ -95,7 +109,7 @@ describe("listRepositories", () => {
       owner: "missing"
     });
 
-    expect(result).toEqual([]);
-    expect(fetchPage).toHaveBeenCalledExactlyOnceWith(1, 100);
+    assert.deepEqual(result, []);
+    assert.deepEqual(calls, [[1, 100]]);
   });
 });
