@@ -187,7 +187,7 @@ function createMcpServer(): McpServer {
         repository: item.repository.full_name,
         html_url: item.html_url
       }));
-      return { content: [{ type: "text", text: JSON.stringify({ total_count: data.total_count, items: matches }, null, 2) }] };
+      return { content: [{ type: "text", text: JSON.stringify({ total_count: data.total_count, incomplete_results: data.incomplete_results, items: matches }, null, 2) }] };
     }
   );
 
