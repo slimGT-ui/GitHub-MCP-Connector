@@ -1,44 +1,82 @@
 # GitHub MCP Connector for Claude
 
-A remote Model Context Protocol (MCP) server that lets Claude access GitHub repositories through a controlled set of tools.
+A remote Model Context Protocol (MCP) server that gives Claude controlled, read-only access to GitHub.
 
-## Project status
+## MVP tools
 
-**Stage:** 1 — project bootstrap  
-**Status:** Planning and initial implementation
+- `list_repositories` — list repositories available to the configured GitHub token
+- `get_repository` — retrieve repository metadata
+- `list_files` — list a repository directory
+- `read_file` — read a UTF-8 file, optionally by line range
+- `search_code` — search GitHub code
 
-## Initial MVP
+The first release is read-only. Write operations will be added only after the read-only workflow is tested.
 
-The first release will provide read-only GitHub tools:
+## Stack
 
-- List repositories available to the authenticated GitHub account
-- Get repository metadata
-- List files and directories
-- Read file contents
-- Search code
-
-Write operations (branches, commits, file updates, pull requests) are intentionally deferred until the read-only workflow is tested.
-
-## Planned stack
-
-- TypeScript
-- Model Context Protocol SDK
-- GitHub REST API via Octokit
-- Streamable HTTP transport
+- TypeScript / Node.js 20+
+- MCP TypeScript SDK with Streamable HTTP
+- Octokit (GitHub REST API)
+- Express
 - Vitest
 
-## Deployment target
+## Requirements
 
-A public HTTPS endpoint is required because Claude Web connects to remote MCP servers from Anthropic's infrastructure.
+- Node.js 20 or newer
+- A GitHub fine-grained personal access token with read-only repository metadata and contents permissions
+- A long random secret for `MCP_AUTH_TOKEN`
 
-## Security principles
+## Run locally
 
-- GitHub credentials are stored only as server-side environment secrets.
-- Never commit access tokens or other secrets.
-- Start with read-only permissions and add write scopes only when needed.
-- Validate repository names, paths, refs, and search inputs.
-- Do not expose arbitrary GitHub API proxying.
+```bash
+npm install
+cp .env.example .env
+```
 
-## Development
+Set `GITHUB_TOKEN` and `MCP_AUTH_TOKEN` in `.env`, then:
 
-Implementation and deployment instructions will be added as the MVP takes shape.
+```bash
+npm run dev
+```
+
+Health check:
+
+```bash
+curl http://localhost:3000/health
+```
+
+The MCP endpoint is `http://localhost:3000/mcp`. It requires:
+
+```
+Authorization: Bearer <MCP_AUTH_TOKEN>
+```
+
+## Claude Web deployment
+
+Claude Web requires a public HTTPS endpoint reachable on port 443. Deploy this service to a Node-compatible host, configure the two environment secrets, and expose the MCP endpoint at:
+
+```
+https://YOUR-HOST/mcp
+```
+
+When adding the custom connector in Claude, configure the fixed request header:
+
+- Header: `Authorization`
+- Value: `Bearer YOUR_MCP_AUTH_TOKEN`
+
+Do not put the GitHub token in Claude. It stays on the server.
+
+## Security
+
+- Keep `.env` out of Git.
+- Never expose the GitHub token to the MCP client.
+- Use a fine-grained token with the minimum required read-only permissions.
+- The shared MCP bearer secret protects the endpoint from anonymous access.
+- Do not add write permissions to the GitHub token for this MVP.
+
+## Scripts
+
+- `npm run dev` — development server with reload
+- `npm run build` — TypeScript type-check and build
+- `npm test` — run tests
+- `npm start` — run the compiled server
