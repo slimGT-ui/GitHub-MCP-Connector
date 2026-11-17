@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { isValidBearerToken } from "./security.js";
+import { listRepositories } from "./repositories.js";
 import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -44,15 +45,18 @@ function createMcpServer(): McpServer {
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     async ({ page, per_page, owner }) => {
-      const response = await github.rest.repos.listForAuthenticatedUser({
-        page,
-        per_page,
-        sort: "updated",
-        affiliation: "owner,collaborator,organization_member"
-      });
-      const visibleRepositories = owner
-        ? response.data.filter((repo) => repo.owner.login.toLowerCase() === owner.toLowerCase())
-        : response.data;
+      const visibleRepositories = await listRepositories(
+        async (apiPage, apiPerPage) => {
+          const { data } = await github.rest.repos.listForAuthenticatedUser({
+            page: apiPage,
+            per_page: apiPerPage,
+            sort: "updated",
+            affiliation: "owner,collaborator,organization_member"
+          });
+          return data;
+        },
+        { page, per_page, owner }
+      );
 
       const repositories = visibleRepositories.map((repo) => ({
         full_name: repo.full_name,
