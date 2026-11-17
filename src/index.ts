@@ -1,10 +1,11 @@
 import "dotenv/config";
 import { isValidBearerToken } from "./security.js";
+import { listRepositories } from "./repositories.js";
 import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const requiredEnv = ["GITHUB_TOKEN", "MCP_AUTH_TOKEN"] as const;
 for (const key of requiredEnv) {
@@ -44,15 +45,18 @@ function createMcpServer(): McpServer {
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
     },
     async ({ page, per_page, owner }) => {
-      const response = await github.rest.repos.listForAuthenticatedUser({
-        page,
-        per_page,
-        sort: "updated",
-        affiliation: "owner,collaborator,organization_member"
-      });
-      const visibleRepositories = owner
-        ? response.data.filter((repo) => repo.owner.login.toLowerCase() === owner.toLowerCase())
-        : response.data;
+      const visibleRepositories = await listRepositories(
+        async (apiPage, apiPerPage) => {
+          const { data } = await github.rest.repos.listForAuthenticatedUser({
+            page: apiPage,
+            per_page: apiPerPage,
+            sort: "updated",
+            affiliation: "owner,collaborator,organization_member"
+          });
+          return data;
+        },
+        { page, per_page, owner }
+      );
 
       const repositories = visibleRepositories.map((repo) => ({
         full_name: repo.full_name,
@@ -183,7 +187,7 @@ function createMcpServer(): McpServer {
         repository: item.repository.full_name,
         html_url: item.html_url
       }));
-      return { content: [{ type: "text", text: JSON.stringify({ total_count: data.total_count, items: matches }, null, 2) }] };
+      return { content: [{ type: "text", text: JSON.stringify({ total_count: data.total_count, incomplete_results: data.incomplete_results, items: matches }, null, 2) }] };
     }
   );
 

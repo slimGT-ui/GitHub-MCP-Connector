@@ -1,26 +1,27 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 import { isValidBearerToken } from "./security.js";
 
 describe("isValidBearerToken", () => {
   const token = "a-long-random-secret";
 
   it("accepts the exact bearer token", () => {
-    expect(isValidBearerToken(`Bearer ${token}`, token)).toBe(true);
+    assert.equal(isValidBearerToken(`Bearer ${token}`, token), true);
   });
 
   it("rejects a different token", () => {
-    expect(isValidBearerToken("Bearer wrong-token", token)).toBe(false);
+    assert.equal(isValidBearerToken("Bearer wrong-token", token), false);
   });
 
   it("rejects a missing authorization header", () => {
-    expect(isValidBearerToken(undefined, token)).toBe(false);
+    assert.equal(isValidBearerToken(undefined, token), false);
   });
 
   it("rejects a non-bearer authorization scheme", () => {
-    expect(isValidBearerToken(`Basic ${token}`, token)).toBe(false);
+    assert.equal(isValidBearerToken(`Basic ${token}`, token), false);
   });
 
   it("rejects an empty configured token", () => {
-    expect(isValidBearerToken("Bearer ", "")).toBe(false);
+    assert.equal(isValidBearerToken("Bearer ", ""), false);
   });
 });

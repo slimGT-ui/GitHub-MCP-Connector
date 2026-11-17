@@ -8,8 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "tsx --test src/security.test.ts src/repositories.test.ts",
+    "test:watch": "tsx --test --watch src/security.test.ts src/repositories.test.ts"
   },
   "engines": {
     "node": ">=20"
@@ -19,13 +19,12 @@
     "@octokit/rest": "^22.0.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.30",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+    "typescript": "^5.8.3"
   }
 }
