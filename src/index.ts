@@ -1,5 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
+import { timingSafeEqual } from "node:crypto";
 import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -25,7 +26,7 @@ function isAuthorized(req: Request): boolean {
 
   const supplied = Buffer.from(header.slice("Bearer ".length));
   const expected = Buffer.from(process.env.MCP_AUTH_TOKEN ?? "");
-  return supplied.length === expected.length && supplied.length > 0 && require("node:crypto").timingSafeEqual(supplied, expected);
+  return supplied.length === expected.length && supplied.length > 0 && timingSafeEqual(supplied, expected);
 }
 
 function createMcpServer(): McpServer {
