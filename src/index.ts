@@ -1,6 +1,6 @@
 import "dotenv/config";
 import cors from "cors";
-import { timingSafeEqual } from "node:crypto";
+import { isValidBearerToken } from "./security.js";
 import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -21,12 +21,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cors({ origin: false, methods: ["GET", "POST", "DELETE"], allowedHeaders: ["content-type", "mcp-session-id", "authorization"] }));
 
 function isAuthorized(req: Request): boolean {
-  const header = req.header("authorization");
-  if (!header?.startsWith("Bearer ")) return false;
-
-  const supplied = Buffer.from(header.slice("Bearer ".length));
-  const expected = Buffer.from(process.env.MCP_AUTH_TOKEN ?? "");
-  return supplied.length === expected.length && supplied.length > 0 && timingSafeEqual(supplied, expected);
+  return isValidBearerToken(req.header("authorization"), process.env.MCP_AUTH_TOKEN ?? "");
 }
 
 function createMcpServer(): McpServer {
