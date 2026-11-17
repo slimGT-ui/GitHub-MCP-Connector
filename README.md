@@ -104,15 +104,27 @@ The local MCP endpoint is `http://localhost:3000/mcp`. It requires:
 Authorization: Bearer <MCP_AUTH_TOKEN>
 ```
 
-## Deployment notes
+## Deploy on Render (free)
 
-Claude Web requires a public HTTPS endpoint. Deploy this service to a Node-compatible host, configure `GITHUB_TOKEN` and `MCP_AUTH_TOKEN` as private environment variables in the hosting provider, and expose the MCP endpoint at:
+A Render Blueprint is included as `render.yaml`. It configures one free Node.js web service in Frankfurt, builds the TypeScript project, starts the compiled server, and uses `/health` for health checks.
 
-```
-https://YOUR-HOST/mcp
-```
+1. Sign in to [Render](https://render.com/).
+2. In the Dashboard, choose **New → Blueprint**.
+3. Connect the `slimGT-ui/GitHub-MCP-Connector` repository and select the `main` branch.
+4. Render detects `render.yaml`. Review the service and keep the **Free** plan.
+5. When prompted, enter the two secret values:
+   - `GITHUB_TOKEN` — your own GitHub fine-grained personal access token, with read-only repository metadata and contents permissions for the repositories you want to access.
+   - `MCP_AUTH_TOKEN` — a private random secret of at least 32 characters. Generate a unique value and store it securely.
+6. Create the Blueprint and wait for the first deploy to finish.
+7. Open the service's `onrender.com` URL. Check that `/health` returns JSON with `"status":"ok"`.
+8. In Claude Web, add a custom connector using the service URL with `/mcp` appended, and configure the request header:
+   - Header name: `Authorization`
+   - Header value: `Bearer YOUR_MCP_AUTH_TOKEN`
 
-Do not put the GitHub token in Claude. It stays on the server. Hosting providers may have free-tier limits, including sleeping/idle behavior, usage caps, or cold starts; check the provider's current terms before deploying.
+The GitHub token belongs only in Render's environment settings. Never paste it into Claude or commit it to this repository.
+
+Render's free web services spin down after 15 minutes without inbound traffic and can take about a minute to wake up. Free instances also have monthly usage limits. This is suitable for a personal test deployment, not a production availability guarantee. See [Render's free instance limitations](https://render.com/docs/free).
+
 
 ## Security
 
