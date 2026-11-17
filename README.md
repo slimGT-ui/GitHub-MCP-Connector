@@ -18,7 +18,7 @@ The first release is read-only. Write operations will be added only after the re
 - MCP TypeScript SDK with Streamable HTTP
 - Octokit (GitHub REST API)
 - Express
-- Vitest
+- Node.js built-in test runner (`node:test`)
 
 ## Requirements
 
@@ -29,7 +29,7 @@ The first release is read-only. Write operations will be added only after the re
 ## Run locally
 
 ```bash
-npm install
+npm ci
 cp .env.example .env
 ```
 
