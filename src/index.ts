@@ -5,7 +5,7 @@ import express, { type Request, type Response } from "express";
 import { Octokit } from "@octokit/rest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const requiredEnv = ["GITHUB_TOKEN", "MCP_AUTH_TOKEN"] as const;
 for (const key of requiredEnv) {
